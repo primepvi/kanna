@@ -13,7 +13,7 @@ export default class extends Event<"messageCreate"> {
   public async execute(message: Message<boolean>): Promise<void> {
     const [commandName, ...args] = message.content.slice(bot.prefix.length).split(" ");
     
-    const command = bot.commands.get(commandName);
+    const command = bot.commands.get(commandName!);
     if (!command) {
       await message.reply(`> ❌ **| Erro!** ${message.author}, o **comando** não **foi encontrado**.`);
       return;

@@ -1,4 +1,5 @@
 import { Event } from "./Event.ts";
+import { GuessEquation } from "../minigames/GuessEquation.ts";
 import { Client, Collection, GatewayIntentBits } from "discord.js";
 import { readdirSync } from "node:fs";
 import path from "node:path";
@@ -14,10 +15,11 @@ export interface BotOptions {
 export class Bot extends Client<true> {
   public db: TwinDB = new TwinDB();
   public commands: Collection<string, PrefixCommand> = new Collection();
+  public matches: Collection<string, GuessEquation> = new Collection();
   public prefix: string;
 
   declare token: string;
-
+  
   public constructor(options: BotOptions) {
     super({ intents: options.intents });
 
