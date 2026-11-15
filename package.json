@@ -9,7 +9,7 @@
     "#bot": "./src/bot.ts"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node --env-file=.env src/index.ts"
   },
   "keywords": [],
   "author": "primepvi",
@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "discord.js": "^14.27.0",
-    "kompozr": "^1.5.0",
     "twin-db": "^2.1.1"
   }
 }

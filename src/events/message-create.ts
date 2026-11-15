@@ -11,14 +11,14 @@ export default class extends Event<"messageCreate"> {
   }
 
   public async execute(message: Message<boolean>): Promise<void> {
-    const [commandName, ...args] = message.content.slice(bot.prefix.length).split(" ");
-    
-    const command = bot.commands.get(commandName!);
+    const items = message.content.slice(bot.prefix.length).split(" ");
+    const command = bot.commands.get(`${items[0]} ${items[1]}`) || bot.commands.get(items[0]!);
     if (!command) {
       await message.reply(`> ❌ **| Erro!** ${message.author}, o **comando** não **foi encontrado**.`);
       return;
     }
 
+    const args = command.isSubCommand() ? items.splice(2) : items.splice(1);
     if (!command.shouldExecute(message, args)) return;
     await command.execute(message, args);
   }

@@ -1,10 +1,12 @@
 import { Event } from "./Event.ts";
-import { GuessEquation } from "../minigames/GuessEquation.ts";
 import { Client, Collection, GatewayIntentBits } from "discord.js";
 import { readdirSync } from "node:fs";
 import path from "node:path";
 import { TwinDB } from "twin-db";
-import { PrefixCommand } from "./PrefixCommand.ts";
+import { PrefixCommand, PrefixSubCommand } from "./PrefixCommand.ts";
+import { Component } from "./Component.ts";
+
+import type { VeilMatch } from "./VeilMatch.ts";
 
 export interface BotOptions {
   prefix: string;
@@ -14,9 +16,11 @@ export interface BotOptions {
 
 export class Bot extends Client<true> {
   public db: TwinDB = new TwinDB();
-  public commands: Collection<string, PrefixCommand> = new Collection();
-  public matches: Collection<string, GuessEquation> = new Collection();
   public prefix: string;
+  
+  public commands  = new Collection<string, PrefixCommand>();
+  public components = new Collection<string, Component>();
+  public veil = new Collection<string, VeilMatch>();
 
   declare token: string;
   
@@ -29,8 +33,10 @@ export class Bot extends Client<true> {
 
   public async setup() {
     await this.loadCommands();
-    await super.login(this.token);
+    await this.loadComponents();
     await this.loadEvents();
+    
+    await super.login(this.token);
   }
 
   private async loadFiles(folderPath: string) {
@@ -64,8 +70,22 @@ export class Bot extends Client<true> {
     for (const file of files) {
       const module = await import(file);
       const command: PrefixCommand = new module.default();
-      this.commands.set(command.name, command);
-      console.log(`[sucesso] O comando "${command.name}" foi carregado.`);
+      const commandKey = command.isSubCommand() ? `${command.parent} ${command.name}` : command.name;
+      this.commands.set(commandKey, command);
+      
+      console.log(`[sucesso] O comando "${commandKey}" foi carregado.`);
+    }
+  }
+
+  private async loadComponents() {
+    const files = await this.loadFiles("src/components");
+    
+    for (const file of files) {
+      const module = await import(file);
+      const component: Component = new module.default();
+      this.components.set(component.name, component);
+      
+      console.log(`[sucesso] O componente "${component.name}" foi carregado.`);
     }
   }
 }
