@@ -8,9 +8,7 @@ export default class extends Component<"Button"> {
 
   public async execute(interaction: ButtonInteraction<CacheType>, args: string[]) {
     const match = bot.veil.get(args[0]!);
-    if (!match) return;
-
-    if (!match.addPlayer(interaction.user.id)) {
+    if (!match || !match.addPlayer(interaction.user.id)) {
       await interaction.reply({ content: "Não foi possivel entrar nessa partida.", flags: ["Ephemeral"] });
       return;
     }
