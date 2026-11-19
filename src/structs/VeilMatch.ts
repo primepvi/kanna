@@ -1,4 +1,4 @@
-import { Collection } from "discord.js";
+import { Collection, Message } from "discord.js";
 import { VeilPlayer } from "./VeilPlayer.ts";
 import { shuffleArray } from "../utils/rng.ts";
 import { CONFIG, type VeilCard, type VeilConfig } from "../constants/veil.ts";
@@ -12,15 +12,17 @@ export interface VeilMatchRound {
 
 export class VeilMatch {
   public id: string;
+  public winner: string = "";
   public host: string;
   public goals: number[];
   public round: VeilMatchRound;
   public players: Collection<string, VeilPlayer>;
   public config: VeilConfig;
+  public message?: Message<true>;
 
   public constructor(host: string, config: VeilConfig = CONFIG) {
     this.id = String(Date.now() + parseInt(host));
-    this.host = host;    
+    this.host = host;
     this.goals = shuffleArray(Array.from(
       { length: 16 },
       (_, i) => i > 7 ? (i % 8) * -1 - 1 : i + 1
@@ -50,9 +52,24 @@ export class VeilMatch {
     return this.players.sweep(p => p.id === id) > 0;
   }
 
+  public renderBoard(): string {
+    const currentPlayer = this.players.find(p => p.index === this.round.turn)!;
+    const table = this.round.cards.map(c => c.id)
+      .join(", ");
+
+    const board = [
+      `**Rodada**: ${this.round.index}`,
+      `**Jogador**: <@${currentPlayer.id}>`,
+      `**Mesa**: ${table}`,
+      `**Contador**: ${this.round.counter}`,
+    ].join("\n");
+
+    return board;
+  }
+
   public start(): boolean {
     const canStart = this.players.size <= this.config.maxPlayers
-      && this.players.size >= this.config.minPlayers;
+      && this.players.size >= this.config.minPlayers && this.round.index == 0;
     if (!canStart) return false;
 
     this.initializeRound();
@@ -86,9 +103,18 @@ export class VeilMatch {
 
   public finalizeRound(): void {
     this.round.turn = 0;
+    this.round.cards = [];
 
     const scorer = this.players.find(p => p.goal === this.round.counter);
-    if (scorer) scorer.points += 1;
+    if (scorer) {
+      scorer.points += 1;
+    }
+
+    if (scorer && scorer.points >= this.config.maxPoints) {
+      this.round.index = -1;
+      this.winner = scorer.id;
+      return;
+    }
 
     this.initializeRound();
   }

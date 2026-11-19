@@ -29,7 +29,7 @@ export class VeilPlayer {
     
     for (const card of cards) {
       const index = this.cards.findIndex(c => c.id === card);
-      if (index > 0) {
+      if (index >= 0) {
         const removed = this.cards.splice(index, 1)[0]!;
         result.push(removed);
       }
