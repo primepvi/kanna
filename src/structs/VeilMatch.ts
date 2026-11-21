@@ -7,8 +7,11 @@ export interface VeilMatchRound {
   index: number;
   turn: number;
   counter: number;
+  previousCards: VeilCard[];
   cards: VeilCard[];
 };
+
+export type VeilMatchStatus = "lobby" | "playing" | "ended";
 
 export class VeilMatch {
   public id: string;
@@ -19,6 +22,7 @@ export class VeilMatch {
   public players: Collection<string, VeilPlayer>;
   public config: VeilConfig;
   public message?: Message<true>;
+  public status: VeilMatchStatus;
 
   public constructor(host: string, config: VeilConfig = CONFIG) {
     this.id = String(Date.now() + parseInt(host));
@@ -33,14 +37,16 @@ export class VeilMatch {
       turn: 0,
       counter: 0,
       cards: [],
+      previousCards: [],
     };
 
     this.players = new Collection();
     this.config = config;
+    this.status = "lobby";
   }
 
   public addPlayer(id: string): boolean {
-    const playerCanJoin = !this.players.find(p => p.id === id) && this.players.size < 5;
+    const playerCanJoin = !this.players.find(p => p.id === id) && this.players.size < 5 && this.status === "lobby";
     if (!playerCanJoin) return false;
 
     const goal = this.goals.pop()!;
@@ -54,12 +60,16 @@ export class VeilMatch {
 
   public renderBoard(): string {
     const currentPlayer = this.players.find(p => p.index === this.round.turn)!;
-    const table = this.round.cards.map(c => c.id)
-      .join(", ");
+    
+    const previousTable = this.round.previousCards.map(c => c.emoji)
+      .join(" ");
+    const table = this.round.cards.map(c => c.emoji)
+      .join(" ");
 
     const board = [
       `**Rodada**: ${this.round.index}`,
       `**Jogador**: <@${currentPlayer.id}>`,
+      `**Última Rodada**: ${previousTable}`,
       `**Mesa**: ${table}`,
       `**Contador**: ${this.round.counter}`,
     ].join("\n");
@@ -69,14 +79,17 @@ export class VeilMatch {
 
   public start(): boolean {
     const canStart = this.players.size <= this.config.maxPlayers
-      && this.players.size >= this.config.minPlayers && this.round.index == 0;
+      && this.players.size >= this.config.minPlayers && this.status === "lobby";
     if (!canStart) return false;
 
-    this.initializeRound();
-    return true;
+    this.status = "playing";
+
+    return this.initializeRound();
   }
 
-  public initializeRound(): void {
+  public initializeRound(): boolean {
+    if (this.status !== "playing") return false;
+    
     this.round.index += 1;
     for (let i = 0; i < this.players.size; i++) {
       const player = this.players.find(p => p.index === this.round.turn)!;
@@ -85,9 +98,13 @@ export class VeilMatch {
 
       this.round.turn = (this.round.turn + 1) % this.players.size;
     }
+
+    return true;
   }
 
-  public playTurn(cards: string[]): void {
+  public playTurn(cards: string[]): boolean {
+    if (this.status !== "playing") return false;
+    
     const player = this.players.find(p => p.index === this.round.turn)!;
     const playedCards = player.removeCards(cards);
     for (const card of playedCards) {
@@ -99,10 +116,13 @@ export class VeilMatch {
     if (this.round.turn >= this.players.size) {
       this.finalizeRound();
     }
+
+    return true;
   }
 
-  public finalizeRound(): void {
+  public finalizeRound() {
     this.round.turn = 0;
+    this.round.previousCards = this.round.cards;
     this.round.cards = [];
 
     const scorer = this.players.find(p => p.goal === this.round.counter);
@@ -113,6 +133,8 @@ export class VeilMatch {
     if (scorer && scorer.points >= this.config.maxPoints) {
       this.round.index = -1;
       this.winner = scorer.id;
+      this.status = "ended";
+      
       return;
     }
 

@@ -9,7 +9,7 @@ export default class extends Component<"StringMenu"> {
   public async execute(interaction: StringSelectMenuInteraction<CacheType>, args: string[]) {
     const match = bot.veil.get(args[0]!);
     if (!match || !match.players.has(interaction.user.id)) {
-      await interaction.reply({ content: "Você não pode interagir nessa partida..", flags: ["Ephemeral"] });
+      await interaction.reply({ content: "Você não pode interagir nessa partida.", flags: ["Ephemeral"] });
       return;
     }
 
@@ -31,17 +31,13 @@ export default class extends Component<"StringMenu"> {
     const row = new ActionRowBuilder<ButtonBuilder>()
       .setComponents(viewHandBtn);
 
-    await match.message!.edit({ content: match.renderBoard(), components: [row] });
-
-    await interaction.reply({ content: "Você jogou as cartas.", flags: ["Ephemeral"] });
-
-    if (match.round.index === -1) {
+    await interaction.update({ content: "Você jogou as cartas.", components: [] });
+    
+    if (match.status === "ended") {
       bot.veil.delete(match.id);
-
-      if (match.message?.deletable)
-        match.message.delete();
-
-      await interaction.followUp({ content: `${match.winner} ganhou a partida` });
+      match.message!.edit({ content: `${match.winner} ganhou a partida`, components: [] });
+    } else {
+      await match.message!.edit({ content: match.renderBoard(), components: [row] });
     }
   }
 }
