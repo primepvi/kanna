@@ -1,7 +1,10 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Message } from "discord.js";
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, Message } from "discord.js";
 import { PrefixSubCommand } from "../../structs/PrefixCommand.ts";
 import { bot } from "#bot";
 import { VeilMatch } from "#structs/VeilMatch";
+import { container, text } from "../../utils/builders.ts";
+import { icons } from "../../constants/icons.ts";
+import { createLobbyButtons, createLobbyContainer } from "../../ui/veil.ts";
 
 export default class extends PrefixSubCommand {
   public parent = "veil";
@@ -16,28 +19,9 @@ export default class extends PrefixSubCommand {
 
     const match = new VeilMatch(message.author.id);
     match.addPlayer(message.author.id);
-    
     bot.veil.set(match.id, match);
 
-    const startMatchBtn = new ButtonBuilder()
-      .setCustomId(`veil-start/${match.id}`)
-      .setLabel("Começar")
-      .setStyle(ButtonStyle.Primary);
-
-    const joinMatchBtn = new ButtonBuilder()
-      .setCustomId(`veil-join/${match.id}`)
-      .setLabel("Entrar")
-      .setStyle(ButtonStyle.Secondary);
-
-    const row = new ActionRowBuilder<ButtonBuilder>()
-      .setComponents(startMatchBtn, joinMatchBtn);
-
-    const board = [
-      `Id: ${match.id}`,
-      `Anfitrião: ${message.author}`,
-      `Jogadores: \n${match.players.map(p => `- <@${p.id}>`).join('\n')}`
-    ];
-
-    await message.reply({ content: board.join("\n"), components: [row] });
+    const components = [createLobbyContainer(match), createLobbyButtons(match)];    
+    await message.reply({ components, flags: ["IsComponentsV2"] });
   }
 }
